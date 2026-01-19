@@ -1,0 +1,41 @@
+/* 悬浮球：强制置顶、右侧悬浮 */
+#st-native-snow-btn {
+    position: fixed !important;
+    top: 20%;
+    right: 10px;
+    width: 50px;
+    height: 50px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    color: white;
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 2147483647; /* 宇宙最高层级 */
+    user-select: none;
+    backdrop-filter: blur(4px);
+    transition: transform 0.2s, background 0.2s;
+}
+
+#st-native-snow-btn.active {
+    background: rgba(40, 200, 80, 0.9);
+    box-shadow: 0 0 15px rgba(40, 200, 80, 0.6);
+}
+
+.st-native-flake {
+    position: fixed !important;
+    top: -30px;
+    color: white;
+    font-size: 20px;
+    pointer-events: none !important;
+    z-index: 2147483646;
+    text-shadow: 0 0 2px black;
+    animation: st-fall 5s linear infinite;
+}
+
+@keyframes st-fall {
+    to { transform: translateY(110vh) rotate(360deg); }
+}
