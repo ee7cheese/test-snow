@@ -112,10 +112,10 @@
                         <div class="ambient-control-row">
                             <label>特效类型</label>
                             <select id="ambient_type">
-                                <option value="snow">❄️ 柔光雪花</option>
-                                <option value="star">✨ 闪烁星光</option>
-                                <option value="leaf">🍃 飘落树叶</option>
-                                <option value="flower">💐 飞舞花瓣</option>
+                                <option value="snow">❄️ 吹雪</option>
+                                <option value="star">✨ 落星</option>
+                                <option value="leaf">🍃 飘叶</option>
+                                <option value="flower">💐 飞花</option>
                             </select>
                         </div>
                         <div class="ambient-control-row">
