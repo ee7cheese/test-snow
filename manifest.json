@@ -3,7 +3,7 @@
     "display_name": "氛围特效",
     "version": "3.0.0",
     "author": "ee072",
-    "description": "背景特效插件。支持发光雪花、星光、花瓣。",
+    "description": "背景特效插件。支持发雪花、星光、树叶、花瓣。",
     "js": "index.js",
     "css": "style.css",
     "type": "extension"
