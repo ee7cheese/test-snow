@@ -99,7 +99,7 @@
             const html = `
                 <div id="${MENU_ID}" class="inline-drawer">
                     <div class="inline-drawer-toggle inline-drawer-header">
-                        <b>✨ 氛围特效 (Ambient)</b>
+                        <b>氛围特效❄️</b>
                         <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
                     </div>
                     <div class="inline-drawer-content ambient-settings-box">
