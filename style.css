@@ -1,20 +1,71 @@
-/* 全屏画布 - 完全穿透，无任何阻碍 */
-#st-ambient-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 2147483647; /* 依然是最高层级 */
-    /* 开启 GPU 图层，让 Canvas 独立于文字渲染 */
-    transform: translateZ(0); 
+/* 容器：GPU 独立图层 */
+#st-ambient-container {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 2147483647; overflow: hidden;
+    /* 开启硬件加速 */
+    transform: translateZ(0);
 }
 
-/* 菜单样式 (保持原生融合风格) */
+/* 粒子外壳：负责从上往下掉 */
+.ambient-wrapper {
+    position: absolute;
+    top: -50px;
+    will-change: transform;
+    animation-name: ambient-drop;
+    animation-timing-function: linear; /* 下落是匀速的 */
+    animation-iteration-count: infinite;
+}
+
+/* 粒子内核：负责左右摇摆 + 旋转 + 发光 */
+.ambient-inner {
+    display: block;
+    width: 100%; height: 100%;
+    will-change: transform;
+    /* 这里的 ease-in-out 是模拟物理惯性的关键 */
+    animation-timing-function: ease-in-out; 
+    animation-iteration-count: infinite;
+    /* 发光 */
+    filter: drop-shadow(0 0 3px currentColor);
+}
+
+/* --- 形状定义 --- */
+.shape-snow { border-radius: 50%; background-color: currentColor; }
+.shape-star { background-color: currentColor; clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.shape-leaf { background-color: currentColor; border-radius: 0 50% 0 50%; }
+.shape-flower { background-color: currentColor; border-radius: 50% 50% 0 50%; }
+
+/* --- 动画关键帧 --- */
+
+/* 1. 垂直下落 */
+@keyframes ambient-drop {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(110vh); }
+}
+
+/* 2. 物理摇摆 (Sway) - 模拟 Canvas 的 Math.sin */
+@keyframes ambient-sway-1 {
+    0% { transform: translateX(0) rotate(0deg); }
+    33% { transform: translateX(30px) rotate(45deg); }
+    66% { transform: translateX(-30px) rotate(-45deg); }
+    100% { transform: translateX(0) rotate(0deg); }
+}
+
+@keyframes ambient-sway-2 {
+    0% { transform: translateX(0) rotate(0deg); }
+    50% { transform: translateX(-50px) rotate(-60deg); }
+    100% { transform: translateX(0) rotate(0deg); }
+}
+
+@keyframes ambient-sway-3 {
+    0% { transform: translateX(0) rotate(0deg); }
+    50% { transform: translateX(50px) rotate(90deg); }
+    100% { transform: translateX(0) rotate(180deg); }
+}
+
+/* 菜单样式 */
 .ambient-settings-box { padding: 0 5px; width: 100%; background: transparent; border: none; }
-.ambient-desc { font-size: 12px; opacity: 0.6; margin: 5px 0 10px 0; text-align: center; font-style: italic; color: var(--SmartThemeBodyColor); }
+.ambient-desc { font-size: 12px; opacity: 0.6; margin: 5px 0 10px 0; text-align: center; color: var(--SmartThemeBodyColor); }
 .ambient-control-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; color: var(--SmartThemeBodyColor); border-bottom: 1px solid var(--SmartThemeBorderColor); }
 .ambient-control-row:last-child { border-bottom: none; }
 .ambient-control-row label { flex: 1; font-weight: 500; }
-.ambient-control-row input, .ambient-control-row select { flex: 1; max-width: 50%; cursor: pointer; }
+.ambient-control-row input, .ambient-control-row select { flex: 1; max-width: 50%; }
