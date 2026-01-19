@@ -1,5 +1,4 @@
 (function() {
-    // 延迟启动，安全第一
     setTimeout(() => {
         try {
             initAmbientPlugin();
@@ -12,13 +11,12 @@
         const CONTAINER_ID = 'st-ambient-container';
         const MENU_ID = 'ambient-effects-menu';
         
-        // 默认配置
         let config = {
             enabled: false,
             type: 'snow',
             speed: 2,
             size: 3,
-            count: 50, // CSS模式下建议数量稍微少一点，效果更好
+            count: 50,
             color: '#ffffff'
         };
 
@@ -29,7 +27,6 @@
 
         // --- 核心：创建/更新粒子 ---
         function renderParticles() {
-            // 1. 找到或创建容器
             let container = document.getElementById(CONTAINER_ID);
             if (!container) {
                 container = document.createElement('div');
@@ -37,64 +34,64 @@
                 document.body.appendChild(container);
             }
 
-            // 2. 如果关闭，清空容器并退出
             if (!config.enabled) {
                 container.innerHTML = '';
                 return;
             }
 
-            // 3. 计算需要的粒子数量
             const currentParticles = container.getElementsByClassName('ambient-particle');
             const targetCount = config.count;
 
-            // 数量多了就删
             while (currentParticles.length > targetCount) {
                 container.removeChild(currentParticles[0]);
             }
 
-            // 数量少了就加
             while (currentParticles.length < targetCount) {
                 const p = document.createElement('div');
-                // 赋予基础类名
                 p.className = 'ambient-particle';
-                resetParticleStyle(p);
+                resetParticleStyle(p); // 初始化样式
                 container.appendChild(p);
             }
             
-            // 4. 更新所有粒子的通用样式（颜色、类型）
-            // 这样修改颜色时不需要刷新就能生效
+            // 更新通用样式
             Array.from(currentParticles).forEach(p => {
-                // 清除旧的形状类名
                 p.classList.remove('shape-snow', 'shape-star', 'shape-leaf', 'shape-flower');
-                // 添加新的形状类名
                 p.classList.add(`shape-${config.type}`);
                 p.style.color = config.color;
             });
         }
 
-        // 重置单个粒子的随机属性 (位置、速度、大小)
+        // --- 重置单个粒子的随机属性 ---
         function resetParticleStyle(p) {
             const left = Math.random() * 100; // 0-100vw
             
-            // 速度算法：基础 10秒，除以速度倍率。速度越大，时间越短
+            // 速度算法
             const baseDuration = 10; 
             const duration = (baseDuration / config.speed) * (Math.random() * 0.5 + 0.5);
             
-            const delay = Math.random() * 5 * -1; // 负延迟，让动画一开始就布满屏幕
+            // 负延迟，让动画一开始就布满屏幕
+            const delay = Math.random() * 5 * -1; 
             
             // 大小算法
-            const sizeBase = 5; // 基础像素
+            const sizeBase = 5;
             const size = sizeBase * config.size * (Math.random() * 0.5 + 0.5);
+
+            // 【核心修改】随机选择 3 种飘落轨迹之一
+            // 这样雪花就不会直直落下了，而是有的左摇，有的右飘
+            const animType = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+            const animName = `fall-sway-${animType}`;
 
             p.style.left = `${left}vw`;
             p.style.width = `${size}px`;
             p.style.height = `${size}px`;
-            p.style.animationName = 'ambient-fall';
+            
+            // 应用随机轨迹
+            p.style.animationName = animName;
             p.style.animationDuration = `${duration}s`;
             p.style.animationDelay = `${delay}s`;
         }
 
-        // --- 菜单注入 (保持不变) ---
+        // --- 菜单注入 ---
         function injectSettingsMenu() {
             const container = jQuery('#extensions_settings'); 
             if (container.length === 0 || jQuery(`#${MENU_ID}`).length) return;
@@ -106,7 +103,7 @@
                         <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
                     </div>
                     <div class="inline-drawer-content ambient-settings-box">
-                        <div class="ambient-desc">GPU加速渲染 | 零卡顿</div>
+                        <div class="ambient-desc">GPU加速渲染 | 自然飘落</div>
                         
                         <div class="ambient-control-row">
                             <label>启用特效</label>
@@ -147,7 +144,6 @@
                 jQuery(this).closest('.inline-drawer').toggleClass('expanded');
             });
 
-            // 绑定事件：修改配置后立即刷新 DOM
             const updateAndSave = () => {
                 saveConfig();
                 renderParticles();
@@ -163,15 +159,13 @@
                 else if(config.type === 'star') config.color = '#fff6cc';
                 jQuery('#ambient_color').val(config.color);
                 
-                // 切换类型时，为了重置形状，我们清空容器强制重绘
+                // 切换类型时，强制刷新 DOM 以重置轨迹和形状
                 document.getElementById(CONTAINER_ID).innerHTML = '';
                 updateAndSave(); 
             });
 
             jQuery('#ambient_color').on('input', function() { config.color = jQuery(this).val(); updateAndSave(); });
             
-            // 拖动滑块时，只更新配置，松开时再重绘(防抖)？或者直接重绘
-            // 这里为了响应速度，我们在 input 事件里只更新非DOM属性，change里重绘
             jQuery('#ambient_size, #ambient_speed, #ambient_count').on('input', function() {
                 config.size = parseFloat(jQuery('#ambient_size').val());
                 config.speed = parseFloat(jQuery('#ambient_speed').val());
@@ -179,9 +173,8 @@
                 saveConfig();
             });
             
-            // 当滑块松开时，才触发大规模重排，防止卡顿
             jQuery('#ambient_size, #ambient_speed, #ambient_count').on('change', function() {
-                 document.getElementById(CONTAINER_ID).innerHTML = ''; // 暴力重置以应用新速度/大小
+                 document.getElementById(CONTAINER_ID).innerHTML = ''; 
                  renderParticles();
             });
         }
@@ -189,10 +182,7 @@
         function saveConfig() { localStorage.setItem('st_ambient_config', JSON.stringify(config)); }
 
         // --- 启动 ---
-        // 初始渲染
         renderParticles();
-        
-        // 注入菜单
         setInterval(() => {
             if (jQuery('#extensions_settings').length > 0) {
                 injectSettingsMenu();
