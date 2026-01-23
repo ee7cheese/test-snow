@@ -1,39 +1,67 @@
-/* --- 原有的样式保持不变 (如果你的文件里有其他自定义样式请保留) --- */
-
-/* 这是一个通用的容器样式，防止遮挡点击 */
-.ambient-effect-container {
-    pointer-events: none;
+/* 全屏画布 - 必须穿透鼠标，且层级最高 */
+#st-ambient-canvas {
     position: fixed;
     top: 0;
     left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none; /* 关键：鼠标穿透 */
+    z-index: 2147483647; /* 宇宙最高层级 */
+}
+
+/* --- 菜单面板样式 (原生融合流) --- */
+
+.ambient-settings-box {
+    padding: 0 5px;
     width: 100%;
-    height: 100%;
-    z-index: 2000;
-    overflow: hidden;
+    /* 移除背景色，直接使用酒馆主题底色 */
+    background: transparent;
+    border: none;
 }
 
-/* --- 新增：下雨模式样式 --- */
-.ambient_rain {
-    position: fixed;
-    top: -50px; /* 从屏幕上方开始 */
-    width: 2px; /* 雨滴宽度 */
-    height: 30px; /* 雨滴长度 */
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5)); /* 渐变半透明白色 */
-    pointer-events: none;
-    z-index: 2000;
-    animation: rain_fall linear infinite;
+/* 描述文字 */
+.ambient-desc {
+    font-size: 12px;
+    opacity: 0.6;
+    margin: 5px 0 10px 0;
+    text-align: center;
+    font-style: italic;
+    color: var(--SmartThemeBodyColor); /* 自动适配主题文字颜色 */
 }
 
-@keyframes rain_fall {
-    0% {
-        transform: translateY(0);
-        opacity: 0;
-    }
-    10% {
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(110vh); /* 落到屏幕底部以下 */
-        opacity: 0.3;
-    }
+/* 每一行的布局 */
+.ambient-control-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--SmartThemeBodyColor);
+    border-bottom: 1px solid var(--SmartThemeBorderColor); /* 自动适配主题分割线 */
+}
+
+/* 最后一行去掉分割线 */
+.ambient-control-row:last-child {
+    border-bottom: none;
+}
+
+/* 左侧标签 */
+.ambient-control-row label {
+    flex: 1;
+    font-weight: 500;
+}
+
+/* 右侧控件 */
+.ambient-control-row input[type="range"],
+.ambient-control-row select,
+.ambient-control-row input[type="color"] {
+    flex: 1;
+    max-width: 50%;
+    cursor: pointer;
+}
+
+.ambient-control-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
 }
