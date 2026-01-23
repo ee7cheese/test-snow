@@ -5,12 +5,11 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    pointer-events: none; /* 关键：鼠标穿透 */
-    z-index: 2147483647; /* 宇宙最高层级 */
+    pointer-events: none; 
+    z-index: 2147483647; 
 }
 
-/* --- 菜单面板样式 (原生融合流) --- */
-
+/* --- 菜单面板样式 --- */
 .ambient-settings-box {
     padding: 0 5px;
     width: 100%;
@@ -18,42 +17,50 @@
     border: none;
 }
 
-/* 描述文字 */
 .ambient-desc {
     font-size: 12px;
     opacity: 0.6;
-    margin: 5px 0 15px 0; /*稍微增加一点下间距*/
+    margin: 5px 0 15px 0;
     text-align: center;
     font-style: italic;
     color: var(--SmartThemeBodyColor); 
 }
 
-/* 每一行的布局 */
 .ambient-control-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0; /* 保持垂直间距，让选项不拥挤 */
+    padding: 8px 0;
     font-size: 14px;
     color: var(--SmartThemeBodyColor);
-    /* border-bottom: 1px solid var(--SmartThemeBorderColor);  <-- 删除了这一行 */
-    border-bottom: none; /* 强制去掉分割线 */
+    border-bottom: none; 
 }
 
-/* 左侧标签 */
 .ambient-control-row label {
     flex: 1;
     font-weight: 500;
-    opacity: 0.9; /* 让文字稍微柔和一点 */
+    opacity: 0.9;
+    white-space: nowrap; /* 防止文字换行 */
 }
 
-/* 右侧控件 */
+/* 右侧控件通用样式 */
 .ambient-control-row input[type="range"],
 .ambient-control-row select,
 .ambient-control-row input[type="color"] {
     flex: 1;
     max-width: 50%;
     cursor: pointer;
+}
+
+/* 专门针对文本框的样式 */
+.ambient-control-row input[type="text"] {
+    flex: 2; /* 让输入框宽一点 */
+    max-width: 65%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--SmartThemeBorderColor);
+    color: var(--SmartThemeBodyColor);
+    border-radius: 4px;
+    padding: 2px 5px;
 }
 
 .ambient-control-row input[type="checkbox"] {
