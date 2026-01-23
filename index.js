@@ -20,57 +20,73 @@
             speed: 2,
             size: 3,
             count: 100,
-            wind: 0,       // 风力
-            opacity: 0.7,  // 新增：全局透明度 (0-1)
+            wind: 0,
+            opacity: 0.7,
             color: '#ffffff'
         };
 
-        // 安全读取配置
         try {
             const saved = localStorage.getItem('st_ambient_config');
             if (saved) config = { ...config, ...JSON.parse(saved) };
-        } catch (err) {
-            console.log('读取配置失败，使用默认配置');
-        }
+        } catch (err) { console.log('读取配置失败'); }
 
         // --- 1. 粒子系统 ---
-        let ctx, particles = [], w, h, animationFrame;
+        let ctx, particles = [], splashes = [], w, h, animationFrame;
 
+        // === 新增：水花类 (专门负责溅起的小水珠) ===
+        class Splash {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                // 水花比雨滴小一点
+                this.size = Math.random() * 1.5 + 0.5;
+                // 向左右随机炸开 + 一点点风的影响
+                this.speedX = (Math.random() - 0.5) * 4 + (config.wind * 0.1); 
+                // 向上跳起 (负数是向上)
+                this.speedY = -Math.random() * 3 - 1;   
+                this.opacity = 1.0;
+                // 重力加速度
+                this.gravity = 0.2;
+            }
+
+            update() {
+                this.speedY += this.gravity; // 模拟重力，先升后降
+                this.y += this.speedY;
+                this.x += this.speedX;
+                this.opacity -= 0.04; // 消失得很快
+            }
+
+            draw() {
+                // 继承全局透明度
+                ctx.globalAlpha = this.opacity * config.opacity;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // === 原有：主粒子类 ===
         class Particle {
             constructor() { this.reset(true); }
 
             reset(initial = false) {
                 this.x = Math.random() * w;
                 this.y = initial ? Math.random() * h : -20;
-                
-                // 基础大小
                 this.size = Math.random() * config.size + (config.size / 2);
                 
-                // === 速度与角度计算 ===
                 if (config.type === 'rain') {
-                    // 雨滴下落速度 (垂直)
                     this.speedY = (Math.random() * 0.5 + 1.0) * config.speed * 3; 
-                    
-                    // 雨滴横向速度 (由风力决定)
                     this.speedX = config.wind * (this.speedY * 0.15); 
-
-                    // 计算雨滴倾斜角度
                     this.angle = Math.atan2(this.speedX, this.speedY) * (180 / Math.PI) * -1;
-                    
                     this.spin = 0;
-                    
-                    // 雨滴的基础层次感 (随机因子)
-                    // 以前是 0.1~0.4，现在提高一点，完全交由全局透明度控制
                     this.alphaFactor = Math.random() * 0.4 + 0.6; 
-
                 } else {
-                    // 雪花/叶子/花瓣 逻辑
                     this.speedY = (Math.random() * 0.5 + 0.5) * config.speed;
                     this.speedX = (Math.random() - 0.5) * (config.speed * 0.5) + (config.wind * 0.5);
                     this.angle = Math.random() * 360;
                     this.spin = (Math.random() - 0.5) * 2; 
-                    
-                    // 普通粒子的基础层次感
                     this.alphaFactor = Math.random() * 0.5 + 0.5;
                 }
             }
@@ -85,25 +101,40 @@
                     this.angle += this.spin; 
                 }
 
-                // 边界检查与重置
-                if (this.y > h + 20 || (this.x > w + 20 && config.wind >= 0) || (this.x < -20 && config.wind <= 0)) {
+                // === 边界检测与重置 ===
+                // 1. 如果超出底部
+                if (this.y > h) {
+                    // 【核心改动】如果是雨，且落到底部，生成水花
+                    if (config.type === 'rain' && config.enabled) {
+                        this.createSplash(this.x, h);
+                    }
                     this.reset();
-                    // 随机修正位置，防止大风导致屏幕一侧空白
+                }
+                // 2. 如果因为风大超出了左右边界
+                else if ((this.x > w + 20 && config.wind >= 0) || (this.x < -20 && config.wind <= 0)) {
+                    this.reset();
                     this.x = Math.random() * (w + 200) - 100; 
+                }
+            }
+
+            createSplash(x, y) {
+                // 限制性能：不是每一滴雨都溅起水花，随机溅起，或者限制水花总数
+                // 这里设置为 50% 概率溅起，防止满屏太乱
+                if (Math.random() > 0.5) return; 
+
+                // 每次撞击产生 2-4 个小水珠
+                const count = Math.floor(Math.random() * 3) + 2;
+                for(let i=0; i<count; i++) {
+                    splashes.push(new Splash(x, y, config.color));
                 }
             }
 
             draw() {
                 if (!ctx) return;
-
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.angle * Math.PI / 180);
-                
-                // 【核心修改】应用全局透明度
-                // 最终透明度 = 粒子自身的随机因子 * 全局设置
                 ctx.globalAlpha = this.alphaFactor * config.opacity;
-                
                 ctx.fillStyle = config.color;
 
                 switch (config.type) {
@@ -125,18 +156,15 @@
                 c.rect(0, 0, r * 0.4, r * 8); 
                 c.fill();
             }
-
             drawStar(c, r) {
                 c.beginPath(); c.moveTo(0, -r);
                 c.quadraticCurveTo(2, -2, r, 0); c.quadraticCurveTo(2, 2, 0, r);
                 c.quadraticCurveTo(-2, 2, -r, 0); c.quadraticCurveTo(-2, -2, 0, -r); c.fill();
             }
-
             drawLeaf(c, r) {
                 c.beginPath(); c.ellipse(0, 0, r, r/2, 0, 0, Math.PI * 2); c.fill();
                 c.beginPath(); c.strokeStyle = "rgba(0,0,0,0.2)"; c.moveTo(-r, 0); c.lineTo(r, 0); c.stroke();
             }
-            
             drawflower(c, r) {
                 c.beginPath(); c.moveTo(0, 0);
                 c.bezierCurveTo(r, -r, r*2, 0, 0, r); c.bezierCurveTo(-r*2, 0, -r, -r, 0, 0); c.fill();
@@ -145,21 +173,16 @@
 
         function initCanvas() {
             if (document.getElementById(CANVAS_ID)) return;
-
             let canvas = document.createElement('canvas');
             canvas.id = CANVAS_ID;
             if (document.body) {
                 document.body.appendChild(canvas);
                 ctx = canvas.getContext('2d');
-                
                 const resize = () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; };
                 window.addEventListener('resize', resize);
                 resize();
-                
                 loop();
-            } else {
-                setTimeout(initCanvas, 500);
-            }
+            } else { setTimeout(initCanvas, 500); }
         }
 
         function loop() {
@@ -167,14 +190,33 @@
             ctx.clearRect(0, 0, w, h);
 
             if (config.enabled) {
+                // 1. 管理主粒子
                 if (particles.length < config.count) {
                     while(particles.length < config.count) particles.push(new Particle());
                 } else if (particles.length > config.count) {
                     particles.splice(config.count);
                 }
                 particles.forEach(p => { p.update(); p.draw(); });
+
+                // 2. 管理水花粒子 (只有下雨时才处理水花数组)
+                if (config.type === 'rain') {
+                    for (let i = splashes.length - 1; i >= 0; i--) {
+                        let s = splashes[i];
+                        s.update();
+                        s.draw();
+                        // 如果完全透明了，从数组移除
+                        if (s.opacity <= 0) {
+                            splashes.splice(i, 1);
+                        }
+                    }
+                } else {
+                    // 如果不是下雨模式，清空水花
+                    if(splashes.length > 0) splashes = [];
+                }
+
             } else {
                 particles = [];
+                splashes = [];
             }
             animationFrame = requestAnimationFrame(loop);
         }
@@ -216,7 +258,6 @@
 
                         <div class="ambient-control-row">
                             <label>透明度</label>
-                            <!-- 新增透明度滑块 -->
                             <input type="range" id="ambient_opacity" min="0.1" max="1" step="0.05" value="${config.opacity}" title="调整特效的可见度">
                         </div>
 
@@ -250,7 +291,6 @@
                 jQuery(this).closest('.inline-drawer').toggleClass('expanded');
             });
 
-            // 事件绑定
             jQuery('#ambient_enabled').on('change', function() { config.enabled = jQuery(this).is(':checked'); saveConfig(); });
             
             jQuery('#ambient_type').on('change', function() { 
@@ -266,10 +306,7 @@
             });
 
             jQuery('#ambient_color').on('input', function() { config.color = jQuery(this).val(); saveConfig(); });
-            
-            // 透明度改变 (不需要重置粒子，实时生效)
             jQuery('#ambient_opacity').on('input', function() { config.opacity = parseFloat(jQuery(this).val()); saveConfig(); });
-
             jQuery('#ambient_size').on('input', function() { config.size = parseFloat(jQuery(this).val()); saveConfig(); resetParticles(); });
             jQuery('#ambient_speed').on('input', function() { config.speed = parseFloat(jQuery(this).val()); saveConfig(); resetParticles(); });
             jQuery('#ambient_wind').on('input', function() { config.wind = parseFloat(jQuery(this).val()); saveConfig(); resetParticles(); });
@@ -277,7 +314,7 @@
         }
 
         function saveConfig() { localStorage.setItem('st_ambient_config', JSON.stringify(config)); }
-        function resetParticles() { particles = []; }
+        function resetParticles() { particles = []; splashes = []; } // 切换配置时也清空水花
 
         initCanvas();
         const checkInterval = setInterval(() => {
