@@ -247,12 +247,12 @@
                             <label>特效类型</label>
                             <select id="ambient_type">
                                 <option value="snow">❄️ 柔光雪花</option>
-                                <option value="rain">🌧️ 倾盆大雨</option>
-                                <option value="custom">🎃 自定义图案</option> 
-                                <option value="image">🖼️ 自定义图片</option> <!-- 新增选项 -->
+                                <option value="rain">🌧️ 下雨天</option>
                                 <option value="star">✨ 闪烁星光</option>
                                 <option value="leaf">🍃 飘落树叶</option>
-                                <option value="flower">💐 飞舞花瓣</option>
+                                <option value="flower">💐 飞舞花瓣</option> 
+                                <option value="custom">🪩 自定义emoji</option> 
+                                <option value="image">🖼️ 自定义图片</option> <!-- 新增选项 -->
                             </select>
                         </div>
                         
