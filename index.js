@@ -22,6 +22,7 @@
             count: 100,
             wind: 0,
             opacity: 0.7,
+            customText: '🎃', // 新增：自定义文字/Emoji的内容
             color: '#ffffff'
         };
 
@@ -33,32 +34,25 @@
         // --- 1. 粒子系统 ---
         let ctx, particles = [], splashes = [], w, h, animationFrame;
 
-        // === 新增：水花类 (专门负责溅起的小水珠) ===
+        // === 水花类 (仅雨天使用) ===
         class Splash {
             constructor(x, y, color) {
                 this.x = x;
                 this.y = y;
                 this.color = color;
-                // 水花比雨滴小一点
                 this.size = Math.random() * 1.5 + 0.5;
-                // 向左右随机炸开 + 一点点风的影响
                 this.speedX = (Math.random() - 0.5) * 4 + (config.wind * 0.1); 
-                // 向上跳起 (负数是向上)
                 this.speedY = -Math.random() * 3 - 1;   
                 this.opacity = 1.0;
-                // 重力加速度
                 this.gravity = 0.2;
             }
-
             update() {
-                this.speedY += this.gravity; // 模拟重力，先升后降
+                this.speedY += this.gravity;
                 this.y += this.speedY;
                 this.x += this.speedX;
-                this.opacity -= 0.04; // 消失得很快
+                this.opacity -= 0.04;
             }
-
             draw() {
-                // 继承全局透明度
                 ctx.globalAlpha = this.opacity * config.opacity;
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
@@ -67,7 +61,7 @@
             }
         }
 
-        // === 原有：主粒子类 ===
+        // === 主粒子类 ===
         class Particle {
             constructor() { this.reset(true); }
 
@@ -76,16 +70,21 @@
                 this.y = initial ? Math.random() * h : -20;
                 this.size = Math.random() * config.size + (config.size / 2);
                 
+                // === 根据类型设定运动逻辑 ===
                 if (config.type === 'rain') {
+                    // 雨：直线快速下落
                     this.speedY = (Math.random() * 0.5 + 1.0) * config.speed * 3; 
                     this.speedX = config.wind * (this.speedY * 0.15); 
                     this.angle = Math.atan2(this.speedX, this.speedY) * (180 / Math.PI) * -1;
                     this.spin = 0;
                     this.alphaFactor = Math.random() * 0.4 + 0.6; 
                 } else {
+                    // 雪/叶/自定义Emoji：飘落
                     this.speedY = (Math.random() * 0.5 + 0.5) * config.speed;
                     this.speedX = (Math.random() - 0.5) * (config.speed * 0.5) + (config.wind * 0.5);
+                    
                     this.angle = Math.random() * 360;
+                    // Emoji 和叶子可以旋转，显得更生动
                     this.spin = (Math.random() - 0.5) * 2; 
                     this.alphaFactor = Math.random() * 0.5 + 0.5;
                 }
@@ -97,20 +96,19 @@
                 if (config.type === 'rain') {
                     this.x += this.speedX;
                 } else {
+                    // 飘落效果
                     this.x += this.speedX + Math.sin(this.y * 0.01) * 0.5;
                     this.angle += this.spin; 
                 }
 
-                // === 边界检测与重置 ===
-                // 1. 如果超出底部
+                // === 边界重置 ===
                 if (this.y > h) {
-                    // 【核心改动】如果是雨，且落到底部，生成水花
+                    // 只有雨天有水花
                     if (config.type === 'rain' && config.enabled) {
                         this.createSplash(this.x, h);
                     }
                     this.reset();
                 }
-                // 2. 如果因为风大超出了左右边界
                 else if ((this.x > w + 20 && config.wind >= 0) || (this.x < -20 && config.wind <= 0)) {
                     this.reset();
                     this.x = Math.random() * (w + 200) - 100; 
@@ -118,15 +116,9 @@
             }
 
             createSplash(x, y) {
-                // 限制性能：不是每一滴雨都溅起水花，随机溅起，或者限制水花总数
-                // 这里设置为 50% 概率溅起，防止满屏太乱
                 if (Math.random() > 0.5) return; 
-
-                // 每次撞击产生 2-4 个小水珠
                 const count = Math.floor(Math.random() * 3) + 2;
-                for(let i=0; i<count; i++) {
-                    splashes.push(new Splash(x, y, config.color));
-                }
+                for(let i=0; i<count; i++) splashes.push(new Splash(x, y, config.color));
             }
 
             draw() {
@@ -142,6 +134,7 @@
                     case 'flower': this.drawflower(ctx, this.size); break;
                     case 'leaf': this.drawLeaf(ctx, this.size); break;
                     case 'rain': this.drawRain(ctx, this.size); break;
+                    case 'custom': this.drawCustom(ctx, this.size); break; // 新增自定义绘制
                     default:
                         ctx.beginPath();
                         ctx.arc(0, 0, this.size, 0, Math.PI * 2);
@@ -151,10 +144,20 @@
                 ctx.restore();
             }
 
+            // === 新增：绘制自定义Emoji/文字 ===
+            drawCustom(c, r) {
+                // 字体大小需要比半径大，这里设为半径的5倍
+                // 比如半径3，字体就是15px
+                const fontSize = Math.max(10, r * 4); 
+                c.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
+                c.textAlign = "center";
+                c.textBaseline = "middle";
+                // 绘制文字
+                c.fillText(config.customText, 0, 0);
+            }
+
             drawRain(c, r) {
-                c.beginPath();
-                c.rect(0, 0, r * 0.4, r * 8); 
-                c.fill();
+                c.beginPath(); c.rect(0, 0, r * 0.4, r * 8); c.fill();
             }
             drawStar(c, r) {
                 c.beginPath(); c.moveTo(0, -r);
@@ -190,7 +193,6 @@
             ctx.clearRect(0, 0, w, h);
 
             if (config.enabled) {
-                // 1. 管理主粒子
                 if (particles.length < config.count) {
                     while(particles.length < config.count) particles.push(new Particle());
                 } else if (particles.length > config.count) {
@@ -198,25 +200,18 @@
                 }
                 particles.forEach(p => { p.update(); p.draw(); });
 
-                // 2. 管理水花粒子 (只有下雨时才处理水花数组)
+                // 水花只有下雨才有
                 if (config.type === 'rain') {
                     for (let i = splashes.length - 1; i >= 0; i--) {
                         let s = splashes[i];
-                        s.update();
-                        s.draw();
-                        // 如果完全透明了，从数组移除
-                        if (s.opacity <= 0) {
-                            splashes.splice(i, 1);
-                        }
+                        s.update(); s.draw();
+                        if (s.opacity <= 0) splashes.splice(i, 1);
                     }
                 } else {
-                    // 如果不是下雨模式，清空水花
                     if(splashes.length > 0) splashes = [];
                 }
-
             } else {
-                particles = [];
-                splashes = [];
+                particles = []; splashes = [];
             }
             animationFrame = requestAnimationFrame(loop);
         }
@@ -225,6 +220,9 @@
         function injectSettingsMenu() {
             const container = jQuery('#extensions_settings'); 
             if (container.length === 0 || jQuery(`#${MENU_ID}`).length) return;
+
+            // 检查 custom 模式是否开启，决定输入框是否显示
+            const customDisplay = config.type === 'custom' ? 'flex' : 'none';
 
             const html = `
                 <div id="${MENU_ID}" class="inline-drawer">
@@ -245,10 +243,17 @@
                             <select id="ambient_type">
                                 <option value="snow">❄️ 柔光雪花</option>
                                 <option value="rain">🌧️ 倾盆大雨</option>
+                                <option value="custom">🎃 自定义图案</option> <!-- 新增选项 -->
                                 <option value="star">✨ 闪烁星光</option>
                                 <option value="leaf">🍃 飘落树叶</option>
                                 <option value="flower">💐 飞舞花瓣</option>
                             </select>
+                        </div>
+                        
+                        <!-- 新增：自定义输入框 (默认隐藏) -->
+                        <div class="ambient-control-row" id="ambient_custom_row" style="display: ${customDisplay}">
+                            <label>图案内容</label>
+                            <input type="text" id="ambient_custom_text" value="${config.customText}" placeholder="输入Emoji或文字" style="text-align:right">
                         </div>
 
                         <div class="ambient-control-row">
@@ -258,7 +263,7 @@
 
                         <div class="ambient-control-row">
                             <label>透明度</label>
-                            <input type="range" id="ambient_opacity" min="0.1" max="1" step="0.05" value="${config.opacity}" title="调整特效的可见度">
+                            <input type="range" id="ambient_opacity" min="0.1" max="1" step="0.05" value="${config.opacity}">
                         </div>
 
                         <div class="ambient-control-row">
@@ -273,7 +278,7 @@
                         
                         <div class="ambient-control-row">
                             <label>风向/斜率</label>
-                            <input type="range" id="ambient_wind" min="-10" max="10" step="1" value="${config.wind}" title="左 <-> 直 <-> 右">
+                            <input type="range" id="ambient_wind" min="-10" max="10" step="1" value="${config.wind}">
                         </div>
 
                         <div class="ambient-control-row">
@@ -295,14 +300,31 @@
             
             jQuery('#ambient_type').on('change', function() { 
                 config.type = jQuery(this).val();
+                
+                // 控制自定义输入框的显示/隐藏
+                if (config.type === 'custom') {
+                    jQuery('#ambient_custom_row').slideDown();
+                } else {
+                    jQuery('#ambient_custom_row').slideUp();
+                }
+
                 if(config.type === 'leaf') config.color = '#88cc88';
                 else if(config.type === 'flower') config.color = '#ffb7b2';
                 else if(config.type === 'snow') config.color = '#ffffff';
                 else if(config.type === 'star') config.color = '#fff6cc';
                 else if(config.type === 'rain') config.color = '#aaddff';
+                else if(config.type === 'custom') config.color = '#ffffff'; // 自定义模式默认白色
+                
                 jQuery('#ambient_color').val(config.color);
                 saveConfig(); 
                 resetParticles(); 
+            });
+
+            // 监听自定义文字输入
+            jQuery('#ambient_custom_text').on('input', function() {
+                config.customText = jQuery(this).val();
+                saveConfig(); 
+                // 注意：这里不需要重置粒子，下次绘制时会自动更新文字
             });
 
             jQuery('#ambient_color').on('input', function() { config.color = jQuery(this).val(); saveConfig(); });
@@ -314,7 +336,7 @@
         }
 
         function saveConfig() { localStorage.setItem('st_ambient_config', JSON.stringify(config)); }
-        function resetParticles() { particles = []; splashes = []; } // 切换配置时也清空水花
+        function resetParticles() { particles = []; splashes = []; }
 
         initCanvas();
         const checkInterval = setInterval(() => {
