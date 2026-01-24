@@ -334,7 +334,7 @@
                 else if(config.type === 'flower') config.color = '#ffb7b2';
                 else if(config.type === 'snow') config.color = '#ffffff';
                 else if(config.type === 'star') config.color = '#fff6cc';
-                else if(config.type === 'rain') config.color = '#aaddff';
+                else if(config.type === 'rain') config.color = '#cccccc';
                 else if(config.type === 'custom' || config.type === 'image') config.color = '#ffffff'; 
                 
                 jQuery('#ambient_color').val(config.color);
