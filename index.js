@@ -13,7 +13,7 @@
         const CANVAS_ID = 'st-ambient-canvas';
         const MENU_ID = 'ambient-effects-menu';
         
-        // --- 默认配置 ---
+        // --- 默认配置 (已修改默认emoji为❄️) ---
         let config = {
             enabled: false,
             type: 'snow',
@@ -22,8 +22,8 @@
             count: 100,
             wind: 0,
             opacity: 0.7,
-            customText: '🎃',     // 自定义文字
-            customImage: '',      // 新增：自定义图片URL
+            customText: '❄️',     // 修改：默认自定义文字为雪花
+            customImage: '',
             color: '#ffffff'
         };
 
@@ -34,33 +34,43 @@
 
         // --- 1. 资源预加载 ---
         let userImgObj = new Image();
-        
-        // 如果有保存的图片URL，尝试加载
-        if (config.customImage) {
-            userImgObj.src = config.customImage;
-        }
+        if (config.customImage) userImgObj.src = config.customImage;
 
         // --- 2. 粒子系统 ---
         let ctx, particles = [], splashes = [], w, h, animationFrame;
 
-        // === 水花类 ===
+        // === 水花类 (增强版) ===
         class Splash {
             constructor(x, y, color) {
-                this.x = x; this.y = y; this.color = color;
+                this.x = x; 
+                this.y = y; 
+                this.color = color;
                 this.size = Math.random() * 1.5 + 0.5;
-                this.speedX = (Math.random() - 0.5) * 4 + (config.wind * 0.1); 
-                this.speedY = -Math.random() * 3 - 1;   
-                this.opacity = 1.0; this.gravity = 0.2;
+                
+                // 横向散开范围变大
+                this.speedX = (Math.random() - 0.5) * 6 + (config.wind * 0.1); 
+                
+                // 修改：向上跳得更高 (数值越大跳得越高，负数代表向上)
+                // 之前是 -1 ~ -4，现在改为 -3 ~ -7
+                this.speedY = -Math.random() * 4 - 3;   
+                
+                this.opacity = 1.0;
+                // 重力稍微调小一点点，让它滞空久一点
+                this.gravity = 0.15; 
             }
             update() {
                 this.speedY += this.gravity;
-                this.y += this.speedY; this.x += this.speedX;
-                this.opacity -= 0.04;
+                this.y += this.speedY; 
+                this.x += this.speedX;
+                // 修改：消失速度变慢，配合跳跃高度
+                this.opacity -= 0.025; 
             }
             draw() {
                 ctx.globalAlpha = this.opacity * config.opacity;
                 ctx.fillStyle = this.color;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); 
+                ctx.fill();
             }
         }
 
@@ -81,7 +91,6 @@
                     this.spin = 0;
                     this.alphaFactor = Math.random() * 0.4 + 0.6; 
                 } else {
-                    // 雪/叶/文字/图片：飘落逻辑
                     this.speedY = (Math.random() * 0.5 + 0.5) * config.speed;
                     this.speedX = (Math.random() - 0.5) * (config.speed * 0.5) + (config.wind * 0.5);
                     this.angle = Math.random() * 360;
@@ -112,7 +121,8 @@
 
             createSplash(x, y) {
                 if (Math.random() > 0.5) return; 
-                const count = Math.floor(Math.random() * 3) + 2;
+                // 修改：增加溅起的水珠数量 (3 到 6 个)
+                const count = Math.floor(Math.random() * 4) + 3;
                 for(let i=0; i<count; i++) splashes.push(new Splash(x, y, config.color));
             }
 
@@ -130,7 +140,7 @@
                     case 'leaf': this.drawLeaf(ctx, this.size); break;
                     case 'rain': this.drawRain(ctx, this.size); break;
                     case 'custom': this.drawCustomText(ctx, this.size); break;
-                    case 'image': this.drawImage(ctx, this.size); break; // 新增图片绘制
+                    case 'image': this.drawImage(ctx, this.size); break;
                     default:
                         ctx.beginPath();
                         ctx.arc(0, 0, this.size, 0, Math.PI * 2);
@@ -141,17 +151,11 @@
             }
 
             // === 绘制逻辑区 ===
-            
-            // 绘制自定义图片
             drawImage(c, r) {
-                // 确保图片加载完成且链接有效，否则画一个备用圆点
                 if (userImgObj.complete && userImgObj.naturalHeight !== 0) {
-                    // 图片大小设为半径的 4 倍比较合适
                     const s = r * 4; 
-                    // 绘制图片，中心点对齐
                     c.drawImage(userImgObj, -s/2, -s/2, s, s);
                 } else {
-                    // 图片没加载出来时，画个问号
                     c.font = `${r*3}px sans-serif`;
                     c.textAlign = "center";
                     c.textBaseline = "middle";
@@ -225,10 +229,10 @@
             const container = jQuery('#extensions_settings'); 
             if (container.length === 0 || jQuery(`#${MENU_ID}`).length) return;
 
-            // 根据当前模式判断显示哪个输入框
             const showText = config.type === 'custom' ? 'flex' : 'none';
             const showImg = config.type === 'image' ? 'flex' : 'none';
 
+            // 修改：完全按照要求的顺序和名称
             const html = `
                 <div id="${MENU_ID}" class="inline-drawer">
                     <div class="inline-drawer-toggle inline-drawer-header">
@@ -250,9 +254,9 @@
                                 <option value="rain">🌧️ 下雨天</option>
                                 <option value="star">✨ 闪烁星光</option>
                                 <option value="leaf">🍃 飘落树叶</option>
-                                <option value="flower">💐 飞舞花瓣</option> 
-                                <option value="custom">🪩 自定义emoji</option> 
-                                <option value="image">🖼️ 自定义图片</option> <!-- 新增选项 -->
+                                <option value="flower">💐 飞舞花瓣</option>
+                                <option value="custom">🏐 自定义emoji</option> 
+                                <option value="image">🖼️ 自定义图片</option>
                             </select>
                         </div>
                         
@@ -338,23 +342,18 @@
                 resetParticles(); 
             });
 
-            // 监听文字输入
             jQuery('#ambient_custom_text').on('input', function() {
                 config.customText = jQuery(this).val();
                 saveConfig(); 
             });
 
-            // 监听图片URL输入 (带防抖，防止输入一个字母就加载一次)
             let imgTimeout;
             jQuery('#ambient_custom_image').on('input', function() {
                 const url = jQuery(this).val();
                 config.customImage = url;
                 saveConfig();
-                
                 clearTimeout(imgTimeout);
-                imgTimeout = setTimeout(() => {
-                    userImgObj.src = url; // 延迟加载图片
-                }, 500);
+                imgTimeout = setTimeout(() => { userImgObj.src = url; }, 500);
             });
 
             jQuery('#ambient_color').on('input', function() { config.color = jQuery(this).val(); saveConfig(); });
