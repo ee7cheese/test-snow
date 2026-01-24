@@ -255,7 +255,7 @@
                                 <option value="star">✨ 闪烁星光</option>
                                 <option value="leaf">🍃 飘落树叶</option>
                                 <option value="flower">💐 飞舞花瓣</option>
-                                <option value="custom">🏐 自定义emoji</option> 
+                                <option value="custom">🪩 自定义emoji</option> 
                                 <option value="image">🖼️ 自定义图片</option>
                             </select>
                         </div>
