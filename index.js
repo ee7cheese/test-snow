@@ -12,8 +12,8 @@
     function initAmbientPlugin() {
         const CANVAS_ID = 'st-ambient-canvas';
         const MENU_ID = 'ambient-effects-menu';
+
         
-        // --- 默认配置 ---
         let config = {
             enabled: false,
             type: 'snow',
@@ -39,22 +39,30 @@
         // --- 2. 粒子系统 ---
         let ctx, particles = [], splashes = [], w, h, animationFrame;
 
-        // === 水花类 ===
+        // === 水花类 (增强版) ===
         class Splash {
             constructor(x, y, color) {
                 this.x = x; 
                 this.y = y; 
                 this.color = color;
                 this.size = Math.random() * 1.5 + 0.5;
+                
+                // 横向散开范围变大
                 this.speedX = (Math.random() - 0.5) * 6 + (config.wind * 0.1); 
+                
+                // 修改：向上跳得更高 (数值越大跳得越高，负数代表向上)
+                // 之前是 -1 ~ -4，现在改为 -3 ~ -7
                 this.speedY = -Math.random() * 4 - 3;   
+                
                 this.opacity = 1.0;
+                // 重力稍微调小一点点，让它滞空久一点
                 this.gravity = 0.15; 
             }
             update() {
                 this.speedY += this.gravity;
                 this.y += this.speedY; 
                 this.x += this.speedX;
+                // 修改：消失速度变慢，配合跳跃高度
                 this.opacity -= 0.025; 
             }
             draw() {
@@ -72,41 +80,17 @@
 
             reset(initial = false) {
                 this.x = Math.random() * w;
-                
-                // 窗前雨滴需要从更高的地方开始，避免突兀
-                const startY = (config.type === 'rain_glass') ? -50 : -20;
-                this.y = initial ? Math.random() * h : startY;
-                
-                // 基础大小
+                this.y = initial ? Math.random() * h : -20;
                 this.size = Math.random() * config.size + (config.size / 2);
                 
-                // === 1. 普通暴雨模式 (Rain) ===
+                // === 根据类型设定运动逻辑 ===
                 if (config.type === 'rain') {
                     this.speedY = (Math.random() * 0.5 + 1.0) * config.speed * 3; 
                     this.speedX = config.wind * (this.speedY * 0.15); 
                     this.angle = Math.atan2(this.speedX, this.speedY) * (180 / Math.PI) * -1;
                     this.spin = 0;
                     this.alphaFactor = Math.random() * 0.4 + 0.6; 
-                } 
-                // === 2. 窗前雨滴模式 (Rain Glass) - 新增 ===
-                else if (config.type === 'rain_glass') {
-                    // 模拟玻璃表面的滑动
-                    this.baseSpeed = config.speed * 2; 
-                    this.speedY = Math.random() * this.baseSpeed + 1;
-                    
-                    // 水痕长度
-                    this.rainLength = Math.random() * 20 + 10; 
-
-                    // 蜿蜒参数
-                    this.waveFreq = Math.random() * 0.02 + 0.01;
-                    this.waveAmp = Math.random() * 1.5; 
-
-                    this.accel = 0;
-                    this.speedX = config.wind * 0.5; // 受风影响较小
-                    this.alphaFactor = Math.random() * 0.3 + 0.5;
-                } 
-                // === 3. 其他飘落模式 (Snow, Leaf, etc.) ===
-                else {
+                } else {
                     this.speedY = (Math.random() * 0.5 + 0.5) * config.speed;
                     this.speedX = (Math.random() - 0.5) * (config.speed * 0.5) + (config.wind * 0.5);
                     this.angle = Math.random() * 360;
@@ -116,36 +100,17 @@
             }
 
             update() {
-                // === 窗前雨滴特殊逻辑 ===
-                if (config.type === 'rain_glass') {
-                    // 模拟重力加速
-                    if (Math.random() < 0.01) this.accel = 0.5; 
-                    this.speedY += this.accel;
-                    if (this.speedY > this.baseSpeed * 3) this.accel = -0.1; 
-                    if (this.speedY < this.baseSpeed) this.accel = 0; 
-
-                    this.y += this.speedY;
-                    // 蜿蜒运动
-                    this.x += Math.sin(this.y * this.waveFreq) * this.waveAmp + config.wind * 0.2;
-                } 
-                // === 普通暴雨逻辑 ===
-                else if (config.type === 'rain') {
-                    this.y += this.speedY;
+                this.y += this.speedY;
+                if (config.type === 'rain') {
                     this.x += this.speedX;
-                } 
-                // === 其他飘落逻辑 ===
-                else {
-                    this.y += this.speedY;
+                } else {
                     this.x += this.speedX + Math.sin(this.y * 0.01) * 0.5;
                     this.angle += this.spin; 
                 }
 
                 // === 边界重置 ===
                 if (this.y > h) {
-                    // 两种雨都产生水花
-                    if ((config.type === 'rain' || config.type === 'rain_glass') && config.enabled) {
-                        this.createSplash(this.x, h);
-                    }
+                    if (config.type === 'rain' && config.enabled) this.createSplash(this.x, h);
                     this.reset();
                 }
                 else if ((this.x > w + 20 && config.wind >= 0) || (this.x < -20 && config.wind <= 0)) {
@@ -156,6 +121,7 @@
 
             createSplash(x, y) {
                 if (Math.random() > 0.5) return; 
+                // 修改：增加溅起的水珠数量 (3 到 6 个)
                 const count = Math.floor(Math.random() * 4) + 3;
                 for(let i=0; i<count; i++) splashes.push(new Splash(x, y, config.color));
             }
@@ -164,15 +130,7 @@
                 if (!ctx) return;
                 ctx.save();
                 ctx.translate(this.x, this.y);
-
-                // 雨不旋转
-                if (config.type !== 'rain' && config.type !== 'rain_glass') {
-                    ctx.rotate(this.angle * Math.PI / 180);
-                } else if (config.type === 'rain') {
-                    // 暴雨要根据风向旋转
-                    ctx.rotate(this.angle * Math.PI / 180);
-                }
-                
+                ctx.rotate(this.angle * Math.PI / 180);
                 ctx.globalAlpha = this.alphaFactor * config.opacity;
                 ctx.fillStyle = config.color;
 
@@ -180,11 +138,10 @@
                     case 'star': this.drawStar(ctx, this.size); break;
                     case 'flower': this.drawflower(ctx, this.size); break;
                     case 'leaf': this.drawLeaf(ctx, this.size); break;
-                    case 'rain': this.drawRain(ctx, this.size); break; // 普通暴雨
-                    case 'rain_glass': this.drawFlowingRain(ctx, this.size); break; // 窗前雨滴
+                    case 'rain': this.drawRain(ctx, this.size); break;
                     case 'custom': this.drawCustomText(ctx, this.size); break;
                     case 'image': this.drawImage(ctx, this.size); break;
-                    default: // snow
+                    default:
                         ctx.beginPath();
                         ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                         ctx.shadowBlur = 5; ctx.shadowColor = config.color; ctx.fill();
@@ -193,41 +150,28 @@
                 ctx.restore();
             }
 
-            // === 绘制：流动的雨 ===
-            drawFlowingRain(c, r) {
-                c.beginPath();
-                c.arc(0, 0, r * 0.6, 0, Math.PI * 2);
-                c.fill();
-                let grad = c.createLinearGradient(0, 0, 0, -this.rainLength * r);
-                grad.addColorStop(0, config.color); 
-                grad.addColorStop(1, "transparent"); 
-                c.fillStyle = grad;
-                c.beginPath();
-                c.moveTo(-r * 0.4, 0);
-                c.lineTo(r * 0.4, 0);
-                c.lineTo(0, -this.rainLength * r);
-                c.fill();
-            }
-
-            // === 绘制：普通暴雨 ===
-            drawRain(c, r) { 
-                c.beginPath(); 
-                c.rect(0, 0, r * 0.4, r * 8); 
-                c.fill(); 
-            }
-
+            // === 绘制逻辑区 ===
             drawImage(c, r) {
                 if (userImgObj.complete && userImgObj.naturalHeight !== 0) {
-                    const s = r * 4; c.drawImage(userImgObj, -s/2, -s/2, s, s);
+                    const s = r * 4; 
+                    c.drawImage(userImgObj, -s/2, -s/2, s, s);
                 } else {
-                    c.font = `${r*3}px sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("?", 0, 0);
+                    c.font = `${r*3}px sans-serif`;
+                    c.textAlign = "center";
+                    c.textBaseline = "middle";
+                    c.fillText("?", 0, 0);
                 }
             }
+
             drawCustomText(c, r) {
                 const fontSize = Math.max(10, r * 4); 
                 c.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
-                c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(config.customText, 0, 0);
+                c.textAlign = "center";
+                c.textBaseline = "middle";
+                c.fillText(config.customText, 0, 0);
             }
+
+            drawRain(c, r) { c.beginPath(); c.rect(0, 0, r * 0.4, r * 8); c.fill(); }
             drawStar(c, r) {
                 c.beginPath(); c.moveTo(0, -r);
                 c.quadraticCurveTo(2, -2, r, 0); c.quadraticCurveTo(2, 2, 0, r);
@@ -269,8 +213,7 @@
                 }
                 particles.forEach(p => { p.update(); p.draw(); });
 
-                // 两种雨都显示水花
-                if (config.type === 'rain' || config.type === 'rain_glass') {
+                if (config.type === 'rain') {
                     for (let i = splashes.length - 1; i >= 0; i--) {
                         let s = splashes[i];
                         s.update(); s.draw();
@@ -289,6 +232,7 @@
             const showText = config.type === 'custom' ? 'flex' : 'none';
             const showImg = config.type === 'image' ? 'flex' : 'none';
 
+            // 修改：完全按照要求的顺序和名称
             const html = `
                 <div id="${MENU_ID}" class="inline-drawer">
                     <div class="inline-drawer-toggle inline-drawer-header">
@@ -296,7 +240,7 @@
                         <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
                     </div>
                     <div class="inline-drawer-content ambient-settings-box">
-                        <div class="ambient-desc">自定义你的背景氛围效果</div>
+                        <div class="ambient-desc">🪄</div>
                         
                         <div class="ambient-control-row">
                             <label>启用特效</label>
@@ -308,20 +252,21 @@
                             <select id="ambient_type">
                                 <option value="snow">❄️ 柔光雪花</option>
                                 <option value="rain">🌧️ 下雨天</option>
-                                <option value="rain_glass">💧 窗前雨滴</option> <!-- 新增 -->
                                 <option value="star">✨ 闪烁星光</option>
                                 <option value="leaf">🍃 飘落树叶</option>
                                 <option value="flower">💐 飞舞花瓣</option>
-                                <option value="custom">🏐 自定义emoji</option> 
-                                <option value="image">🖼️ 自定义图片</option>
+                                <option value="custom">🪩 自定义emoji</option> 
+                                <option value="image">🌄 自定义图片</option>
                             </select>
                         </div>
                         
+                        <!-- 文字输入框 -->
                         <div class="ambient-control-row" id="ambient_custom_row" style="display: ${showText}">
                             <label>图案内容</label>
                             <input type="text" id="ambient_custom_text" value="${config.customText}" placeholder="输入Emoji或文字" style="text-align:right">
                         </div>
 
+                        <!-- 图片URL输入框 -->
                         <div class="ambient-control-row" id="ambient_image_row" style="display: ${showImg}">
                             <label>图片链接</label>
                             <input type="text" id="ambient_custom_image" value="${config.customImage}" placeholder="粘贴图片URL (https://...)" style="text-align:right; width: 60%;">
@@ -372,6 +317,7 @@
             jQuery('#ambient_type').on('change', function() { 
                 config.type = jQuery(this).val();
                 
+                // 切换菜单显示
                 if (config.type === 'custom') {
                     jQuery('#ambient_custom_row').slideDown();
                     jQuery('#ambient_image_row').slideUp();
@@ -383,12 +329,12 @@
                     jQuery('#ambient_image_row').slideUp();
                 }
 
+                // 预设颜色逻辑
                 if(config.type === 'leaf') config.color = '#88cc88';
                 else if(config.type === 'flower') config.color = '#ffb7b2';
                 else if(config.type === 'snow') config.color = '#ffffff';
                 else if(config.type === 'star') config.color = '#fff6cc';
-                else if(config.type === 'rain') config.color = '#cccccc'; // 下雨天默认浅灰
-                else if(config.type === 'rain_glass') config.color = '#cccccc'; // 窗前雨滴默认浅灰
+                else if(config.type === 'rain') config.color = '#aaddff';
                 else if(config.type === 'custom' || config.type === 'image') config.color = '#ffffff'; 
                 
                 jQuery('#ambient_color').val(config.color);
@@ -396,7 +342,10 @@
                 resetParticles(); 
             });
 
-            jQuery('#ambient_custom_text').on('input', function() { config.customText = jQuery(this).val(); saveConfig(); });
+            jQuery('#ambient_custom_text').on('input', function() {
+                config.customText = jQuery(this).val();
+                saveConfig(); 
+            });
 
             let imgTimeout;
             jQuery('#ambient_custom_image').on('input', function() {
